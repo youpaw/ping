@@ -20,6 +20,7 @@
 
 #define DATA_SIZE 56        /* default data size */
 #define CKTAB_SIZE 128
+#define BUFFER_SIZE(p) (p->packet_size + sizeof(icmphdr_t))
 
 #define TIMING(s)  ((s) >= sizeof(struct timeval))
 
@@ -66,7 +67,7 @@ typedef struct ping_info
     size_t cktab_size;
 
 	unsigned char *buffer;         /* I/O buffer */
-    size_t buffer_size;
+    size_t packet_size;
 	char *hostname;					/* Printable hostname */
 	struct sockaddr_in dst;		/* whom to ping */
 	struct sockaddr_in src;

@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <netdb.h>
 #include <netinet/ip.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,9 +43,8 @@ int ping_init(t_pinfo *p) {
   if (!(p->cktab = malloc(CKTAB_SIZE)))
     return -1;
   memset(p->cktab, 0, p->cktab_size);
-  p->buffer_size =
-      opt_vals.data_size + sizeof(struct timeval) + sizeof(icmphdr_t);
-  p->buffer = malloc(p->buffer_size + sizeof(struct iphdr));
+  p->packet_size = opt_vals.data_size;
+  p->buffer = malloc(BUFFER_SIZE(p));
   if (!p->buffer)
     return -1;
   clock_gettime(CLOCK_MONOTONIC, &p->start_time);
@@ -53,21 +53,22 @@ int ping_init(t_pinfo *p) {
 
 int ping_xmit(t_pinfo *p) {
   int ret;
+  size_t buflen = p->packet_size + 8;
 
   /* Mark sequence number as sent */
   CKTAB_CLR(p, p->num_xmit);
 
   /* Encode ICMP header */
-  icmp_echo_encode(p->buffer, p->buffer_size, p->id, p->num_xmit);
+  icmp_echo_encode(p->buffer, buflen, p->id, p->num_xmit);
 
-  ret = sendto(p->fd, (char *)p->buffer, p->buffer_size, 0,
+  ret = sendto(p->fd, (char *)p->buffer, buflen, 0,
                (struct sockaddr *)&p->dst, sizeof(struct sockaddr_in));
   if (ret < 0)
     return -1;
   else {
     p->num_xmit++;
-    if (ret != p->buffer_size)
-      printf("ping: wrote %s %zu chars, ret=%d\n", p->hostname, p->buffer_size,
+    if (ret != buflen)
+      printf("ping: wrote %s %zu chars, ret=%d\n", p->hostname, p->packet_size,
              ret);
   }
   return 0;
@@ -80,8 +81,8 @@ int ping_recv(t_pinfo *p) {
   struct ip *ip;
   int dupflag;
 
-  n = recvfrom(p->fd, (char *)p->buffer, p->buffer_size + sizeof(struct iphdr),
-               0, (struct sockaddr *)&p->dst, &fromlen);
+  n = recvfrom(p->fd, (char *)p->buffer, BUFFER_SIZE(p), 0,
+               (struct sockaddr *)&p->dst, &fromlen);
   if (n < 0)
     return -1;
 
@@ -95,7 +96,7 @@ int ping_recv(t_pinfo *p) {
   switch (icmp->icmp_type) {
   case ICMP_ECHOREPLY:
 
-    if (ntohs(icmp->icmp_id) != p->id)
+    if (icmp->icmp_id != p->id)
       return -1;
 
     if (rc)
@@ -103,12 +104,12 @@ int ping_recv(t_pinfo *p) {
               inet_ntoa(p->src.sin_addr));
 
     p->num_recv++;
-    if (CKTAB_TST(p, ntohs(icmp->icmp_seq))) {
+    if (CKTAB_TST(p, icmp->icmp_seq)) {
       p->num_rept++;
       p->num_recv--;
       dupflag = 1;
     } else {
-      CKTAB_SET(p, ntohs(icmp->icmp_seq));
+      CKTAB_SET(p, icmp->icmp_seq);
       dupflag = 0;
     }
     print_echo(dupflag, &p->dst, &p->src, ip, icmp, n);

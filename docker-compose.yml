@@ -1,0 +1,14 @@
+services:
+  debug:
+    build:
+      context: .
+      dockerfile: debian.Dockerfile
+    container_name: ft_ping_debug
+    privileged: true
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - "5678:5678"
+    tty: true
+    stdin_open: true

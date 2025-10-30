@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <sys/file.h>
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -23,13 +24,18 @@ int send_echo(t_pinfo *p) {
   icmphdr_t *icmp;
   struct timeval tv;
   int rc;
+  size_t off = 0;
 
   icmp = (icmphdr_t *)p->buffer;
   gettimeofday(&tv, NULL);
-  memcpy(icmp->icmp_data, &tv, sizeof(tv));
+  if (TIMING(p->packet_size)) {
+    memcpy(icmp->icmp_data, &tv, sizeof(tv));
+    off += sizeof(tv);
+  }
   if (opt_vals.data)
-    memcpy(icmp->icmp_data + sizeof(tv), opt_vals.data, opt_vals.data_size);
-
+    memcpy(icmp->icmp_data + off, opt_vals.data,
+           p->packet_size > sizeof(tv) ?
+           p->packet_size - sizeof(tv) : p->packet_size);
   rc = ping_xmit(p);
   if (rc < 0)
     error(EXIT_FAILURE, errno, "sending packet");
@@ -50,7 +56,7 @@ static void tvsub(struct timeval *out, struct timeval *in) {
   out->tv_sec -= in->tv_sec;
 }
 
-int print_echo(int dupflag, struct sockaddr_in *dest, struct sockaddr_in *from,
+int print_echo(int dupflag, struct sockaddr_in *dst, struct sockaddr_in *src,
                struct ip *ip, icmphdr_t *icmp, int datalen) {
   int hlen;
   struct timeval tv;
@@ -93,7 +99,8 @@ int print_echo(int dupflag, struct sockaddr_in *dest, struct sockaddr_in *from,
   }
 
   printf("%d bytes from %s: icmp_seq=%u", datalen,
-         inet_ntoa(*(struct in_addr *)&from->sin_addr.s_addr), icmp->icmp_seq);
+         inet_ntoa(*(struct in_addr *)&dst->sin_addr.s_addr),
+         icmp->icmp_seq);
   printf(" ttl=%d", ip->ip_ttl);
   if (timing)
     printf(" time=%.3f ms", triptime);

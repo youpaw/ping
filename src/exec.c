@@ -111,12 +111,13 @@ static void print_stat(t_pinfo *p) {
       printf("%d%% packet loss",
              (int)(((p->num_xmit - p->num_recv) * 100) / p->num_xmit));
   }
-  if (p->num_recv && TIMING(opt_vals.data_size)) {
+  printf("\n");
+  if (p->num_recv && TIMING(p->packet_size)) {
     double total = p->num_recv + p->num_rept;
     double avg = stat.tsum / total;
     double vari = stat.tsumsq / total - avg * avg;
 
-    printf("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n",
+    printf("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms",
            stat.tmin, avg, stat.tmax, nsqrt(vari, 0.0005));
   }
   printf("\n");
@@ -129,9 +130,10 @@ int exec(t_pinfo *p) {
   stat.tmin = 999999999.0;
 
   printf("PING %s (%s): %zu data bytes", p->hostname,
-         inet_ntoa(p->dst.sin_addr), opt_vals.data_size);
+         inet_ntoa(p->dst.sin_addr), p->packet_size);
   if (opts & OPT_VERBOSE)
     printf(", id 0x%04x = %u\n", p->id, p->id);
+  printf("\n");
 
   signal(SIGINT, sig_int);
   rc = run(p);
