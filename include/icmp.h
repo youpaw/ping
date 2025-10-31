@@ -1,15 +1,14 @@
 #ifndef ICMP_H
 #define ICMP_H
 
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/types.h>
-
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
+#include <sys/types.h>
 
-typedef struct icmp_header {
+typedef struct icmp_header icmphdr_t;
+
+struct icmp_header {
   unsigned char icmp_type;   /* type of message, see below */
   unsigned char icmp_code;   /* type sub code */
   unsigned short icmp_cksum; /* ones complement cksum of struct */
@@ -68,7 +67,7 @@ typedef struct icmp_header {
 #define icmp_ip icmp_dun.id_ip.idi_ip
 #define icmp_mask icmp_dun.id_mask
 #define icmp_data icmp_dun.id_data
-} icmphdr_t;
+};
 
 #define ICMP_ECHOREPLY 0    /* Echo Reply                   */
 #define ICMP_DEST_UNREACH 3 /* Destination Unreachable      */
@@ -135,5 +134,4 @@ int icmp_echo_encode(unsigned char *buffer, size_t bufsize, int ident,
                      int seqno);
 int icmp_echo_decode(unsigned char *buffer, size_t bufsize, struct ip **ip,
                      icmphdr_t **icmp);
-
 #endif // ICMP_H

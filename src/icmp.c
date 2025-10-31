@@ -1,7 +1,14 @@
-#include "icmp.h"
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+
+#include <netinet/in.h>
+#include <netinet/in_systm.h>
+#include <netinet/ip.h>
 /*#include <netinet/ip_icmp.h> -- deliberately not including this */
 #include <arpa/inet.h>
-#include <linux/icmp.h>
+
+#include "icmp.h"
 
 int icmp_generic_encode(unsigned char *buffer, size_t bufsize, int type,
                         int ident, int seqno) {

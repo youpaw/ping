@@ -1,8 +1,8 @@
-//
-// Created by youpaw on 09/02/25.
-//
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <signal.h>
+#include <sys/socket.h>
 
-#include "ping.h"
 #include <errno.h>
 #include <memory.h>
 #include <poll.h>
@@ -11,15 +11,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <signal.h>
-#include <sys/socket.h>
+#include "ping.h"
 
 t_pstat stat;
 int volatile stop = 0;
 
-void sig_int(int signal) { stop = 1; }
+void sig_int(int signal __attribute__((unused))) { stop = 1; }
 
 static int detect_timeout(const struct timespec *start, uint timeout) {
   struct timespec now;
@@ -50,14 +47,13 @@ static int run(t_pinfo *p) {
     int rc = poll(&pfd, 1, intvl);
 
     if (rc < 0) {
-      if (errno == EINTR)
-        continue;
-      perror("poll failed");
-      exit(EXIT_FAILURE);
+      if (errno != EINTR)
+        perror("poll failed");
+      continue;
     } else if (rc == 0) {
       if (!opt_vals.count || p->num_xmit < opt_vals.count) {
         send_echo(p);
-        if (opts & OPT_FLOOD)
+        if (!(opts & OPT_QUIET) && opts & OPT_FLOOD)
           putchar('.');
         fflush(stdout);
         if (detect_timeout(&p->start_time, opt_vals.timeout))
@@ -72,7 +68,7 @@ static int run(t_pinfo *p) {
       if (ping_recv(p) == 0)
         cnt++;
       if (detect_timeout(&p->start_time, opt_vals.timeout) ||
-          opt_vals.count && cnt >= opt_vals.count)
+          (opt_vals.count && (cnt >= opt_vals.count)))
         break;
     }
   }
@@ -112,15 +108,15 @@ static void print_stat(t_pinfo *p) {
              (int)(((p->num_xmit - p->num_recv) * 100) / p->num_xmit));
   }
   printf("\n");
-  if (p->num_recv && TIMING(p->packet_size)) {
+  if (p->num_recv && TIMING(p->data_size)) {
     double total = p->num_recv + p->num_rept;
     double avg = stat.tsum / total;
     double vari = stat.tsumsq / total - avg * avg;
 
-    printf("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms",
+    printf("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n",
            stat.tmin, avg, stat.tmax, nsqrt(vari, 0.0005));
   }
-  printf("\n");
+  fflush(stdout);
 }
 
 int exec(t_pinfo *p) {
@@ -130,13 +126,15 @@ int exec(t_pinfo *p) {
   stat.tmin = 999999999.0;
 
   printf("PING %s (%s): %zu data bytes", p->hostname,
-         inet_ntoa(p->dst.sin_addr), p->packet_size);
+         inet_ntoa(p->dst.sin_addr), p->data_size);
   if (opts & OPT_VERBOSE)
-    printf(", id 0x%04x = %u\n", p->id, p->id);
+    printf(", id 0x%04x = %u", p->id, p->id);
   printf("\n");
+  fflush(stdout);
 
   signal(SIGINT, sig_int);
   rc = run(p);
+
   print_stat(p);
   return rc;
 }

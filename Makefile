@@ -11,17 +11,19 @@ SRCS		:= echo.c \
 
 OBJS		:= $(addprefix $(OBJ_DIR)/,$(SRCS:.c=.o))
 DEPS		:= $(OBJS:.o=.d)
-CFLAGS	:=  -MMD -Wall -Wextra# -Werror
+CFLAGS	:=  -MMD -Wall -Wextra -Werror
+LDFLAGS :=
 
 NAME		:= ft_ping
 
 .PHONY: all clean fclean re
 
-debug: CFLAGS += -g -O0
-debug: $(NAME)
-
 all: CFLAGS += -O2
 all: $(NAME)
+
+debug: CFLAGS += -g -fsanitize=address -fno-omit-frame-pointer -O0
+debug: LDFLAGS += -fsanitize=address
+debug: fclean $(NAME)
 
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
@@ -32,7 +34,7 @@ $(OBJ_DIR)/%.o: src/%.c
 -include $(DEPS)
 
 $(NAME): $(OBJ_DIR) $(OBJS)
-	gcc -o $(NAME) $(OBJS)
+	gcc $(LDFLAGS) -o $(NAME) $(OBJS)
 
 clean:
 	rm -rf $(OBJ_DIR)
@@ -40,5 +42,5 @@ clean:
 fclean: clean
 	rm -f $(NAME)
 
-re: clean fclean
+re: fclean all
 
