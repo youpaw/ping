@@ -16,7 +16,7 @@ LDFLAGS :=
 
 NAME		:= ft_ping
 
-.PHONY: all clean fclean re
+.PHONY: all clean fclean re debug
 
 all: CFLAGS += -O2
 all: $(NAME)

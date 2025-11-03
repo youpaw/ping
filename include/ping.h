@@ -1,7 +1,3 @@
-//
-// Created by youpaw on 31/01/25.
-//
-
 #ifndef PING_H
 #define PING_H
 
