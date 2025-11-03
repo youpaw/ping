@@ -5,6 +5,7 @@ RUN apt update && apt install -y \
     gdb \
     gdbserver \
     inetutils-ping \
+    python3 \
     && apt clean
 
 RUN echo "deb http://deb.debian.org/debian testing main" >> /etc/apt/sources.list \

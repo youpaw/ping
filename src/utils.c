@@ -65,9 +65,6 @@ int data_init() {
   size_t i = 0;
   unsigned char *p;
 
-  if (!opt_vals.data_size)
-    return -1;
-
   if (!(opt_vals.data = malloc(opt_vals.data_size)))
     goto err;
 

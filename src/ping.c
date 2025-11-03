@@ -170,9 +170,7 @@ int main(int argc, char *argv[]) {
   if (set_dest(&ping, argv[optind]))
     error(EXIT_FAILURE, 0, "unknown host");
 
-  if ((rc = data_init()))
-    return rc;
-  if (!(rc = buffer_init(&ping)))
+  if (!(rc = data_init()) && !(rc = buffer_init(&ping)))
     rc = exec(&ping);
 
   ping_reset(&ping);
